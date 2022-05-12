@@ -1,16 +1,3 @@
-'''
-these links for may 12:
-http://www.mikeburdis.com/wp/notes/plotting-serial-port-data-using-python-and-matplotlib/
-https://jakevdp.github.io/blog/2012/08/18/matplotlib-animation-tutorial/
-https://matplotlib.org/2.0.2/examples/animation/simple_anim.html
-https://www.youtube.com/watch?v=wEbGhYjn4QI
-https://akumar34.github.io/data.html
-https://dev.socrata.com/foundry/data.providenceri.gov/tisk-wsvu
-'''
-
-
-
-
 import serial
 from process_image import *
 from plot_data import *
@@ -24,18 +11,12 @@ import readchar
 import sys
 
 
-# about baudrate
-# rate at which your Ardunio transmits data
-# that way we know at what rate we can sample the incoming data
-# look at the Arduino C code that already has a baudrate specified...
-
-
 def connectToArduino(portVal: str, baudrate: int):
     global serialInst
     serialInst = serial.Serial()
     serialInst.baudrate = 9600
     serialInst.port = portVal
-    serialInst.open() # listen any incoming data until user stops the data stream in the terminal
+    serialInst.open() # listen to any incoming data until user stops the data stream in the terminal
 
 
 
@@ -45,9 +26,7 @@ def writeToCSV(df: pd.DataFrame, filename: str):
 
 def handler(signum, frame):
     '''
-    Reference:
-    
-    Adapted from this code
+    Code reference:
     https://code-maven.com/catch-control-c-in-python
     '''
 
@@ -79,26 +58,21 @@ finalDF = pd.DataFrame()
 
 
 def updateLine(historyAxes, tiltHistory, currentImage):
-    # [pointTuple[0] for pointTuple in tiltHistory]         # x = time
-    # print([pointTuple[1] for pointTuple in tiltHistory])    # y = state
-    # print(tiltHistory)
 
     historyAxes.plot([pointTuple[0] for pointTuple in tiltHistory], [pointTuple[1] for pointTuple in tiltHistory])
     plt.title(f'{currentImage}')
     plt.draw()
     plt.pause(0.01) # is necessary for the plot to update for some reason
-    # plt.show()
 
 
 def addPointToHistory(tiltHistory: list, state: int, initialTime: float, historyAxes, currentImage: str):
     currentTime = time.time() - initialTime
-    tiltHistory.append((currentTime, state)) # append a tuple (time, state)
+    tiltHistory.append((currentTime, state))            # append a tuple (time, state)
     updateLine(historyAxes, tiltHistory, currentImage)
 
 
 
 def detectTilt(imgFolder: list, runRandom: bool):
-# def detectTilt(imgFolder: list):
     '''
     next generation list:
     1) degree of tilt
@@ -111,11 +85,7 @@ def detectTilt(imgFolder: list, runRandom: bool):
     stillTilted = False
     stillNoTilt = False
     tiltHistory = []                # history meaning a time-based graphs
-    # historyPlot, = plt.plot([], [])
-    # plt.xlim(0, 30)
-    # plt.ylim(0, 2)
     historyAxes = plt.axes()
-    # plt.show()
     initialTime = time.time()
     currentImage = ''
     newPothole = 'N/A'
