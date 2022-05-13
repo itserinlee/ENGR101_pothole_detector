@@ -1,4 +1,4 @@
-***Final Project for Foundations Design & Fabrication (Spring '22)***
+***Foundations Design & Fabrication (Spring '22)***
 
 ## About this project
 
