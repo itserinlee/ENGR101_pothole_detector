@@ -4,10 +4,6 @@
 
 dual-system for identifying potholes
 
-#### System 1
+#### System 1: Arduino Mega + breadboard using tilt ball sensor
 
-Arduino Mega + breadboard using tilt ball sensor
-
-#### System 2
-
-Arduino C + Python programs
+#### System 2 Arduino C + Python programs
