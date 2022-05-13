@@ -1,4 +1,4 @@
-***Final Project for Foundatns Design & Fabrication (Spring '22)
+***Final Project for Foundatns Design & Fabrication (Spring '22)***
 
 ## About this project
 
