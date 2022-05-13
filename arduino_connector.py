@@ -1,6 +1,5 @@
 import serial
 from process_image import *
-from plot_data import *
 import matplotlib.pyplot as plt
 import pandas as pd
 from rich_dataframe import prettify
@@ -11,22 +10,35 @@ import readchar
 import sys
 
 
+# set state for graph
+plt.style.use('dark_background')
+
+
+# about baudrate
+# rate at which your Ardunio transmits data
+# that way we know at what rate we can sample the incoming data
+# look at the Arduino C code that already has a baudrate specified...
+
+
 def connectToArduino(portVal: str, baudrate: int):
     global serialInst
     serialInst = serial.Serial()
     serialInst.baudrate = 9600
     serialInst.port = portVal
-    serialInst.open() # listen to any incoming data until user stops the data stream in the terminal
+    serialInst.open()           # listens to any incoming data until user stops the data stream in the terminal
 
 
 
-def writeToCSV(df: pd.DataFrame, filename: str):
-    df.to_csv(f'{filename}.csv', index=False)
+def writeToCSV(finalDF: pd.DataFrame, filename: str):
+    # prettify(finalDF)
+    finalDF.to_csv(f'{filename}.csv', index=False)
 
 
 def handler(signum, frame):
     '''
-    Code reference:
+    Reference:
+    
+    Adapted from this code
     https://code-maven.com/catch-control-c-in-python
     '''
 
@@ -42,9 +54,8 @@ def handler(signum, frame):
         print('    ', end='\r', flush=True)
     elif res == 'w':
         writeToCSV(finalDF, 'output/tilt_results')
-        results = pd.read_csv('output/tilt_results.csv')
-        postProcessPlot(results)
         print('')
+        print('\nSummary stats below will all be 0 when not in random mode.\n')
         summaryStats()
         print('Done.')
         exit(1)
@@ -58,7 +69,6 @@ finalDF = pd.DataFrame()
 
 
 def updateLine(historyAxes, tiltHistory, currentImage):
-
     historyAxes.plot([pointTuple[0] for pointTuple in tiltHistory], [pointTuple[1] for pointTuple in tiltHistory])
     plt.title(f'{currentImage}')
     plt.draw()
@@ -67,31 +77,21 @@ def updateLine(historyAxes, tiltHistory, currentImage):
 
 def addPointToHistory(tiltHistory: list, state: int, initialTime: float, historyAxes, currentImage: str):
     currentTime = time.time() - initialTime
-    tiltHistory.append((currentTime, state))            # append a tuple (time, state)
+    tiltHistory.append((currentTime, state)) # append a tuple (time, state)
     updateLine(historyAxes, tiltHistory, currentImage)
 
 
 
-def detectTilt(imgFolder: list, runRandom: bool):
-    '''
-    next generation list:
-    1) degree of tilt
-    2) LED display
-    3) train binary classifier (i.e. classification algorithm)
-    4) associate image data with geotag/GPS coordinates
-    '''
-
-
+def detectTilt(imgFolder: list, outputFile: str, runRandom: bool):
     stillTilted = False
     stillNoTilt = False
     tiltHistory = []                # history meaning a time-based graphs
     historyAxes = plt.axes()
     initialTime = time.time()
-    currentImage = ''
-    newPothole = 'N/A'
+    currentImage = 'N/A'
+    newPotholeBin = 'N/A'
     addPointToHistory(tiltHistory, 0, initialTime, historyAxes, currentImage)
     global finalDF
-
 
     while True:
 
@@ -131,9 +131,14 @@ def detectTilt(imgFolder: list, runRandom: bool):
                     # imgFolder.pop(0)
                 else:
                     newPothole = randomMode(imgFolder)
+                    newPotholeBin = newPothole[0] # first value in list returned
                 
                 stillTilted = True
                 stillNoTilt = False
+                d = {'wasTilted': int(isTilted), 'imageFilename': currentImage, 'newPothole': newPotholeBin}
+                tempDF = pd.DataFrame(d, index=[0])
+                finalDF = pd.concat([tempDF, finalDF])
+                writeToCSV(finalDF, outputFile)
 
 
             if not isTilted and not stillNoTilt:
@@ -141,20 +146,11 @@ def detectTilt(imgFolder: list, runRandom: bool):
                 addPointToHistory(tiltHistory, 0, initialTime, historyAxes, currentImage)
                 stillTilted = False
                 stillNoTilt = True
-                # currentImage = 'N/A'
-
-            
-            # dataframe capture
-            # d = {'wasTilted': int(isTilted), 'imageFilename': currentImage, 'newPothole': newPothole[0]}
-            # # imgFolder.pop(0)
-
-            # tempDF = pd.DataFrame(d, index=[0])
-            # finalDF = pd.concat([tempDF, finalDF])
-            # prettify(finalDF)
-
-            # # writes to a file each iteration
-            # writeToCSV(finalDF, 'output/tilt_results')
-
+                currentImage = 'N/A'
+                d = {'wasTilted': int(isTilted), 'imageFilename': currentImage, 'newPothole': newPotholeBin}
+                tempDF = pd.DataFrame(d, index=[0])
+                finalDF = pd.concat([tempDF, finalDF])
+                writeToCSV(finalDF, outputFile)
 
 
 if __name__ == '__main__':
@@ -163,17 +159,18 @@ if __name__ == '__main__':
     imgFolder = glob.glob('img/*.jpg') # a list
     port = '/dev/cu.usbmodem144101'
     baudrate = 9600
+    outputFile = 'output/tilt_results'
 
     '''
     args = a list with 1 thing in it
     position 0 of args = name of this program
     '''
     args = sys.argv[1:]
-    if len(args) > 0 and args[0] == 'random': # random parameter to make it only run this if statement
+    if len(args) > 0 and args[0] == 'random': # only runs this mode if random specified as 3rd command-line argument
         connectToArduino(port, baudrate)
-        detectTilt(imgFolder, True)
+        detectTilt(imgFolder, outputFile, True)
         exit()
 
 
     connectToArduino(port, baudrate)
-    detectTilt(imgFolder, False)
+    detectTilt(imgFolder, outputFile, False)
