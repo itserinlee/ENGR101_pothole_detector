@@ -3,7 +3,6 @@ from process_image import *
 import matplotlib.pyplot as plt
 import pandas as pd
 from rich_dataframe import prettify
-import numpy
 import time
 import signal
 import readchar
